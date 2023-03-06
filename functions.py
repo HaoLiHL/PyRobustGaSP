@@ -222,7 +222,7 @@ def neg_log_marginal_post_ref_ppgasp(param,nugget, nugget_est,R0,X,zero_mean,out
       return -2*sum(param)-lmp
     
 def neg_log_marginal_post_approx_ref_deriv(param,nugget,nugget_est,R0,X,zero_mean,output,CL,a,b,kernel_type,alpha):
-  param = np.array(param).reshape(-1,1)
+  #param = np.array(param).reshape(-1,1)
   lml_dev=fcpp.log_marginal_lik_deriv(param,nugget,nugget_est,R0,X,zero_mean,output,kernel_type,alpha)
   lp_dev=fcpp.log_approx_ref_prior_deriv(param,nugget,nugget_est,CL,a,b)
   

@@ -35,7 +35,7 @@ if __name__ == '__main__':
     #print(code.log_approx_ref_prior(np.array([0.1,0.1]),0.1, True,np.array([0.1,0.1]),0.1,0.1))
     #print(code.log_marginal_lik_deriv(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",A,np.array([1,2]),np.array([0.1,0.1])))
     #print(code.log_profile_lik_deriv(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",A,np.array([1,2]),np.array([0.1,0.1])))
-    print(code.log_approx_ref_prior_deriv(np.array([1.31]),0, False,np.array([0]),0.2,0.08))
+    print(code.log_approx_ref_prior_deriv(np.array([1.31]),0.1, False,np.array([0]),0.2,0.08))
     #print(code.log_approx_ref_prior_deriv(np.array([0.1,0.1]),0.1, True,np.array([0.1,0.1]),0.1,0.2))
     #print(code.log_profile_lik_deriv(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",A,np.array([1,2]),np.array([0.1,0.1])))
     #above checked 

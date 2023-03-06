@@ -499,7 +499,7 @@ class rgasp(object):
                     print('Optimized nugget parameter is', nugget_par,'\n')
                     print('Convergence: ', tt_all.success,'\n' )
                     
-                    if ( (-tt_all.fun)>=model_log_post) or (model_beta_hat == None):
+                    if ( (-tt_all.fun)>=model_log_post) or (model_beta_hat == None).any():
                         
                         log_lik=-tt_all.fun
                         model_log_post=-tt_all.fun
@@ -684,7 +684,7 @@ class rgasp(object):
                         'method': model_method,
                         'q': model_q,
                         'nugget_est': model_nugget_est,
-                        'kernel_type':kernel_type
+                        'kernel_type':model_kernel_type,
                         
                         
                         
@@ -799,7 +799,7 @@ class rgasp(object):
         elif model['method']=='mle':
             
             qn_025=sp.stats.norm.ppf(0.025)  
-            qn_975=sp.stats.morn.ppf(0.975)  
+            qn_975=sp.stats.norm.ppf(0.975)  
             
             pred_list=pred_rgasp(model['beta_hat'],model['nugget'],model['input'],model['X'],model['zero_mean'],model['output'],
                                  testing_input,testing_trend,model['L'],model['LX'],model['theta_hat'],
@@ -873,8 +873,10 @@ class rgasp(object):
         
     
 
-test = rgasp()
-#design = np.random.normal(size = 50).reshape(50,1)
+P_rgasp = rgasp()
+import lhsmdu
+
+
 design = np.array([0.7529149,
 7.6520787,
 1.9493830,
@@ -893,17 +895,37 @@ design = np.array([0.7529149,
 
 response = higdon_1_data(design)
 
+task = P_rgasp.create_task(design, response)  # optimization='nelder-mead'
 
-#response = np.random.normal(size = 50)
-#task = test.create_task(design, response, nugget_est =True,method='mmle',prior_choice='ref_gamma',optimization= 'brent')
-task = test.create_task(design, response)
-
-model = test.train(task)
+model = P_rgasp.train(task)
 
 test_input = np.arange(0,10.01,1/100).reshape(-1,1)
 
-result = test.predict_rgasp(model, 
+result = P_rgasp.predict_rgasp(model, 
                   test_input)
+
+
+# design = np.array(lhsmdu.sample(40,8))
+# #design = np.random.normal(size = 100).reshape(50,-1)
+
+
+
+# response = np.arange(40).reshape(-1,1)
+
+# for i in range(40):
+#     response[i,0] = borehole(design[i,:])
+
+# #response = np.random.normal(size = 50)
+# #task = test.create_task(design, response, nugget_est =True,method='mmle',prior_choice='ref_gamma',optimization= 'brent')
+# task = P_rgasp.create_task(design, response, method='mmle')  # optimization='nelder-mead'
+
+# model = P_rgasp.train(task)
+
+# test_input = np.random.normal(size = 80).reshape(10,-1)
+# #np.arange(0,10.01,1/100).reshape(-1,1)
+
+# result = P_rgasp.predict_rgasp(model, 
+#                   test_input)
 
 #print(higdon_1_data(4))
 
