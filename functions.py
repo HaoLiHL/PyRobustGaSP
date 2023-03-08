@@ -282,6 +282,14 @@ def construct_rgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero_
                                 model_output,kernel_type_num,model_alpha)
     return return_list
 
+def construct_ppgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero_mean,
+                            model_output,kernel_type_num,model_alpha):
+    
+    model_beta_hat = np.array(model_beta_hat).reshape(-1,1)
+    return_list = fcpp.construct_rgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero_mean,
+                                model_output,kernel_type_num,model_alpha)
+    return return_list
+
 def pred_rgasp(beta_hat,nugget,input,X,zero_mean,output,
                      testing_input,testing_trend,L,LX,theta_hat,
                      sigma2_hat,qt_025,qt_975,r0,kernel_type_num,alpha,method,interval_data):
