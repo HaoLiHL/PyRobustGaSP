@@ -320,104 +320,107 @@ def search_LB_prob(param, R0,COND_NUM_UB,p,kernel_type,alpha,nugget):
   ##one might change it to
   ##(kappa(R,exact=T)-COND_NUM_UB)^2
   
-def leave_one_out_rgasp(object_class):
-  R_tilde = object_class.L @ np.tranpose(object_class.L)+object_class.nugget
-  sigma_2 = np.repeat(0,object_class.num_obs)
-  mean = np.repeat(0,object_class.num_obs)
-  if object_class.zero_mean == "Yes":
-    for i in range(object_class.num_obs):
+def test_const_column(d):
+    return fcpp.test_const_column(d)
+  
+# def leave_one_out_rgasp(object_class):
+#   R_tilde = object_class.L @ np.tranpose(object_class.L)+object_class.nugget
+#   sigma_2 = np.repeat(0,object_class.num_obs)
+#   mean = np.repeat(0,object_class.num_obs)
+#   if object_class.zero_mean == "Yes":
+#     for i in range(object_class.num_obs):
 
-        #1:object_class@num_obs){
+#         #1:object_class@num_obs){
         
-        r_sub = np.delete(R_tilde,i,0)[:,i] # R_tilde[-i,i]
-        #L_sub = np.linalg.cholesky(np.delete(np.delete(R_tilde,i,0),i,1))
-            #R_tilde[-i,-i])
+#         r_sub = np.delete(R_tilde,i,0)[:,i] # R_tilde[-i,i]
+#         #L_sub = np.linalg.cholesky(np.delete(np.delete(R_tilde,i,0),i,1))
+#             #R_tilde[-i,-i])
             
-        L, lower = sp.linalg.cho_factor(
-            np.delete(np.delete(R_tilde,i,0),i,1), overwrite_a=True, check_finite=False
-        )
-        r_sub_t_R_sub_inv  = sp.linalg.cho_solve(
-            (L, lower), r_sub, overwrite_b=True, check_finite=False
-        )
+#         L, lower = sp.linalg.cho_factor(
+#             np.delete(np.delete(R_tilde,i,0),i,1), overwrite_a=True, check_finite=False
+#         )
+#         r_sub_t_R_sub_inv  = sp.linalg.cho_solve(
+#             (L, lower), r_sub, overwrite_b=True, check_finite=False
+#         )
         
-        #r_sub_t_R_sub_inv=t(backsolve(t(L_sub),forwardsolve(L_sub,r_sub)))
+#         #r_sub_t_R_sub_inv=t(backsolve(t(L_sub),forwardsolve(L_sub,r_sub)))
         
-        R_sub_inv_y = sp.linalg.cho_solve(
-            (L, lower), np.delete(object_class.output,i), overwrite_b=True, check_finite=False
-        )
-        #R_sub_inv_y=backsolve(t(L_sub),forwardsolve(L_sub,object_class@output[-i] ))
-        mean[i]=r_sub_t_R_sub_inv @ np.delete(object_class.output,i)
-        sigma_2_hat=np.delete(object_class.output,i) @ R_sub_inv_y/(object_class.num_obs-1)
-        sigma_2[i]=sigma_2_hat*(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
+#         R_sub_inv_y = sp.linalg.cho_solve(
+#             (L, lower), np.delete(object_class.output,i), overwrite_b=True, check_finite=False
+#         )
+#         #R_sub_inv_y=backsolve(t(L_sub),forwardsolve(L_sub,object_class@output[-i] ))
+#         mean[i]=r_sub_t_R_sub_inv @ np.delete(object_class.output,i)
+#         sigma_2_hat=np.delete(object_class.output,i) @ R_sub_inv_y/(object_class.num_obs-1)
+#         sigma_2[i]=sigma_2_hat*(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
     
-  else:
-    for i in range(object_class.num_obs):
-        r_sub = np.delete(R_tilde,i,0)[:,i]
-        L, lower = sp.linalg.cho_factor(
-            np.delete(np.delete(R_tilde,i,0),i,1), overwrite_a=True, check_finite=False
-        )
-        r_sub_t_R_sub_inv  = sp.linalg.cho_solve(
-            (L, lower), r_sub, overwrite_b=True, check_finite=False
-        )
+#   else:
+#     for i in range(object_class.num_obs):
+#         r_sub = np.delete(R_tilde,i,0)[:,i]
+#         L, lower = sp.linalg.cho_factor(
+#             np.delete(np.delete(R_tilde,i,0),i,1), overwrite_a=True, check_finite=False
+#         )
+#         r_sub_t_R_sub_inv  = sp.linalg.cho_solve(
+#             (L, lower), r_sub, overwrite_b=True, check_finite=False
+#         )
         
-        R_inv_X = sp.linalg.cho_solve(
-            (L, lower), np.delete(object_class.X,i,0), overwrite_b=True, check_finite=False
-        )
+#         R_inv_X = sp.linalg.cho_solve(
+#             (L, lower), np.delete(object_class.X,i,0), overwrite_b=True, check_finite=False
+#         )
         
-        L_x, lower_x = sp.linalg.cho_factor(
-            np.tranpose(np.delete(object_class.X,i,0)) @ R_inv_X, overwrite_a=True, check_finite=False
-        )
-        theta_hat  = sp.linalg.cho_solve(
-            (L_x, lower_x), np.tranpose(R_inv_X)@np.delete(object_class.output,i) , overwrite_b=True, check_finite=False
-        )
+#         L_x, lower_x = sp.linalg.cho_factor(
+#             np.tranpose(np.delete(object_class.X,i,0)) @ R_inv_X, overwrite_a=True, check_finite=False
+#         )
+#         theta_hat  = sp.linalg.cho_solve(
+#             (L_x, lower_x), np.tranpose(R_inv_X)@np.delete(object_class.output,i) , overwrite_b=True, check_finite=False
+#         )
 
-        #r_sub=R_tilde[-i,i]
-        #L_sub=t(chol(R_tilde[-i,-i]))
-        #r_sub_t_R_sub_inv=t(backsolve(t(L_sub),forwardsolve(L_sub,r_sub)))
+#         #r_sub=R_tilde[-i,i]
+#         #L_sub=t(chol(R_tilde[-i,-i]))
+#         #r_sub_t_R_sub_inv=t(backsolve(t(L_sub),forwardsolve(L_sub,r_sub)))
         
-        #R_inv_X=backsolve(t(L_sub),forwardsolve(L_sub,(object_class@X[-i,]) ))
+#         #R_inv_X=backsolve(t(L_sub),forwardsolve(L_sub,(object_class@X[-i,]) ))
   
           
-        #L_X=t(chol(t(object_class@X[-i,])%*%R_inv_X))
-        #theta_hat=backsolve(t(L_X),forwardsolve(L_X,t(R_inv_X)%*%object_class@output[-i]))
+#         #L_X=t(chol(t(object_class@X[-i,])%*%R_inv_X))
+#         #theta_hat=backsolve(t(L_X),forwardsolve(L_X,t(R_inv_X)%*%object_class@output[-i]))
   
-        tilde_output = np.delete(object_class.output,i)- np.delete(object_class.X,i,0)@theta_hat
-        mean[i]=object_class.X[i,:] @ theta_hat+r_sub_t_R_sub_inv @ tilde_output
+#         tilde_output = np.delete(object_class.output,i)- np.delete(object_class.X,i,0)@theta_hat
+#         mean[i]=object_class.X[i,:] @ theta_hat+r_sub_t_R_sub_inv @ tilde_output
       
       
-        if (object_class.method=='post_mode') or (object_class.method=='mmle'):
+#         if (object_class_method=='post_mode') or (object_class_method=='mmle'):
             
-            sigma2_hat = np.tranpose(tilde_output) @ sp.linalg.cho_solve(
-                (L, lower), tilde_output, overwrite_b=True, check_finite=False
-            )/(object_class.num_obs-1-object_class.q)
-            #backsolve(t(L_sub),forwardsolve(L_sub,tilde_output ))/(object_class@num_obs-1-object_class@q)
+#             sigma2_hat = np.tranpose(tilde_output) @ sp.linalg.cho_solve(
+#                 (L, lower), tilde_output, overwrite_b=True, check_finite=False
+#             )/(object_class.num_obs-1-object_class.q)
+#             #backsolve(t(L_sub),forwardsolve(L_sub,tilde_output ))/(object_class@num_obs-1-object_class@q)
             
-            c_star=(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
+#             c_star=(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
             
       
-            h_hat=object_class.X[i,:]-np.tranpose(np.delete(object_class.X,i,0)) @ np.tranpose(r_sub_t_R_sub_inv)
-            c_star_star= c_star+ np.tranpose(h_hat) @ sp.linalg.cho_solve(
-                (L_x, lower_x), h_hat, overwrite_b=True, check_finite=False
-            )
+#             h_hat=object_class.X[i,:]-np.tranpose(np.delete(object_class.X,i,0)) @ np.tranpose(r_sub_t_R_sub_inv)
+#             c_star_star= c_star+ np.tranpose(h_hat) @ sp.linalg.cho_solve(
+#                 (L_x, lower_x), h_hat, overwrite_b=True, check_finite=False
+#             )
             
-            #backsolve(t(L_X),forwardsolve(L_X,h_hat))
-            sigma_2[i] = sigma2_hat*(c_star_star)
-        elif object_class@method=='mle':
-          sigma2_hat=np.tranpose(tilde_output) @ sp.linalg.cho_solve(
-              (L, lower), tilde_output, overwrite_b=True, check_finite=False
-          )/(object_class.num_obs-1)
-          #t(tilde_output)%*%backsolve(t(L_sub),forwardsolve(L_sub,tilde_output ))/(object_class@num_obs-1)
+#             #backsolve(t(L_X),forwardsolve(L_X,h_hat))
+#             sigma_2[i] = sigma2_hat*(c_star_star)
+#         elif object_class_method=='mle':
+#           sigma2_hat=np.tranpose(tilde_output) @ sp.linalg.cho_solve(
+#               (L, lower), tilde_output, overwrite_b=True, check_finite=False
+#           )/(object_class.num_obs-1)
+#           #t(tilde_output)%*%backsolve(t(L_sub),forwardsolve(L_sub,tilde_output ))/(object_class@num_obs-1)
           
-          c_star=(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
+#           c_star=(R_tilde[i,i]-r_sub_t_R_sub_inv @ r_sub)
           
-          sigma_2[i]=sigma2_hat*(c_star)
+#           sigma_2[i]=sigma2_hat*(c_star)
         
-      #sigma_2[i]=object_class@sigma2_hat*(c_star)
+#       #sigma_2[i]=object_class@sigma2_hat*(c_star)
       
     
   
   
-  return {'mean':mean,'sd':np.sqrt(sigma_2)}
+  # return {'mean':mean,'sd':np.sqrt(sigma_2)}
 
   
   #plot((output-mean)/sqrt(sigma_2))

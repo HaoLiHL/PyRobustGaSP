@@ -23,6 +23,7 @@ Created on Wed Feb 22 14:40:25 2023
 
 # design is a input matrix n times p 
 import sys 
+import warnings
 import numpy as np
 import scipy as sp
 from scipy.optimize import minimize,fmin_l_bfgs_b
@@ -137,7 +138,10 @@ class rgasp(object):
         
         
         if ( (optimization!='lbfgs') and (optimization!='nelder-mead') and (optimization!='brent')):
-          sys.exit("optimization should be 'lbfgs' or 'nelder-mead' or 'brent' \n")  
+          sys.exit("optimization should be 'lbfgs' or 'nelder-mead' or 'brent' \n") 
+          
+        if ( (method!='post_mode') and (method!='mle') and (method!='mmle')):
+          sys.exit("method should be 'post_mode' or 'mle' or 'mmle' \n") 
           
           
         if (type(nugget_est)!=bool):
@@ -700,6 +704,7 @@ class rgasp(object):
     
     
     
+    
     def predict_rgasp(self,model, 
                       testing_input, 
                       testing_trend= None,
@@ -815,6 +820,165 @@ class rgasp(object):
 
         
         return output_list
+        
+    
+    def train_ppgasp(self, task):
+        
+        
+        design=task['design']
+        n = design.shape[0]
+        p_x = design.shape[1]
+        
+        model_input = design # <- matrix(as.numeric(design), dim(design)[1],dim(design)[2])
+        model_output = task['response'].reshape(-1,1)
+        
+        if not model_isotropic:
+          model_alpha = task['alpha']
+        else:
+          model_alpha=task['alpha'][0]
+        model_alpha = model_alpha.reshape(-1,1)
+        
+        if(model_isotropic):
+          model_p = 1
+        else:
+          model_p=p_x
+        
+        if (task['optimization']=='brent' and model_p!=1):
+          sys.exit('The Brent optimization method can only work for optimizing one parameter \n')
+        
+        
+        model_num_obs = n
+        model_k = model_output.shape[1]
+        
+        const_column=test_const_column(model_output)
+        
+        if (const_column):
+            sys.exit("Please delete the column of the response matrix that has the same value across all rows. \n")
+        
+        if (optimization=='lbfgs' and ((model_num_obs*model_k)>=10000) ):
+            warnings.warn("""Please consider to select optimization= 'nelder-mead' or 
+                            'brent' as the derivative-based optimization can be inaccurate 
+                            when the number of observations is large.""")
+                            
+        if (not model_isotropic):
+            if (len(kernel_type)==1):
+                model_kernel_type=np.repeat(kernel_type, model_p)
+            elif (len(kernel_type)!=model_p):
+                sys.exit("Please specify the correct number of kernels. \n")
+            else:
+                model_kernel_type=kernel_type
+        else:
+            model_kernel_type=kernel_type
+        
+         ##model@kernel_type <-kernel_type
+         
+         ##change kernel type to integer to pass to C++ code
+         ##1 is power exponent, 2 is matern with roughness 3/2, and 3 is matern with roughenss parameter 5/2
+        kernel_type_num=np.repeat(0,model_p)#rep(0,  model@p)
+        for i_p in range(model_p):
+          if (model_kernel_type[i_p]=="matern_5_2"): 
+              kernel_type_num[i_p]=3
+          elif (model_kernel_type[i_p]=="matern_3_2"):
+              kernel_type_num[i_p]=2
+          elif (model_kernel_type[i_p]=="pow_exp"):
+              kernel_type_num[i_p]=1
+          elif (model_kernel_type[i_p]=="periodic_gauss"): ##this is periodic folding on Gaussian kernel
+              kernel_type_num[i_p]=4
+          elif (model_kernel_type[i_p]=="periodic_exp"):   ##this is periodic folding on Exponential kernel
+              kernel_type_num[i_p]=5
+        
+        kernel_type_num = kernel_type_num.reshape(-1,1)
+        #####I now build the gasp emulator here
+        ##default setting constant mean basis. Of course We should let user to specify it
+        #model@X = matrix(1,model@num_obs,1)   ####constant mean
+        model_X=task['trend']              ###If the trend is specified, use it. If not, use a constant mean. 
+        model_zero_mean=task['zero_mean']
+        #######number of regressor
+        if (model_zero_mean=="Yes"):
+            model_q=0
+        else:
+            model_q = model_X.shape[1]
+            
+            
+        model_nugget_est = task['nugget_est']
+        R0 = task['R0']
+        
+        if(R0 ==None):
+            ##no given value
+            if (not model_isotropic):
+                
+                model_R0 = []#as.list(1:model@p)
+                for i in range(model_p):#1:model_p):
+                  model_R0.append( np.abs(model_input[:,i][:,None] - model_input[:,i]) ) 
+                  #= as.matrix(abs(outer(model@input[,i], model@input[,i], "-")))
+                
+            else:
+              model_R0 = []
+              if (p_x<model_num_obs):
+                  
+                  R0_here=0
+                  for i in range(p_x):
+                      
+                    R0_here=R0_here+np.abs(model_input[:,i][:,None] - model_input[:,i])**2
+                  
+                  model_R0.append(np.sqrt(R0_here))
+              else:
+                  model_R0.append(euclidean_distance(model_input,model_input))
+                
+            
+        elif (type(R0) == np.ndarray):
+            model_R0=[R0]
+        elif (type(R0) ==list):
+            model_R0=R0
+        else:
+            sys.exit("R0 should be either a matrix or a list \n")
+        
+        ##check for R0
+        if(len(model_R0)!=model_p):
+            sys.exit("the number of R0 matrices should be the same as the number of range parameters in the kernel \n")
+        
+        if ( (model_R0[0].shape[0]!=model_num_obs) or (model_R0[0].shape[1]!=model_num_obs)):
+            
+            sys.exit("the dimension of R0 matrices should match the number of observations \n")
+        
+        # line 217 ppgasp
+     
+        ###########calculating lower bound for beta
+        model_CL = np.repeat(0.0,model_p)# rep(0,model@p)    ###CL is also used in the prior so I make it a model parameter
+        
+        if (not model_isotropic):
+            for i_cl in range(model_p):
+                print(type((np.max(model_input[:,i_cl])-np.min(model_input[:,i_cl]))/model_num_obs**(1/model_p))
+          ) 
+                model_CL[i_cl] = ((np.max(model_input[:,i_cl])-np.min(model_input[:,i_cl]))/model_num_obs**(1/model_p))
+        else:
+            model_CL[0]=np.max(model_R0[0])/model_num_obs
+            
+        range_par = task['range_par']
+        lower_bound = task['lower_bound']
+        nugget = task['nugget']
+        initial_values = task['initial_values']
+        num_initial_values = task['num_initial_values']
+        a = task['a']
+        b = task['b']
+        optimization = task['optimization']
+        prior_choice = task['prior_choice']
+        nugget_est = task['nugget_est']
+
+        
+        
+            
+        
+                            
+        
+                            
+                            
+        
+        
+        
+        
+        
+        
         
         
   
