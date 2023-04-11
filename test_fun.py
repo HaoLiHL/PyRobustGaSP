@@ -22,6 +22,15 @@ if __name__ == '__main__':
                   [0.3,0.4]])
     L = np.array([[0.1,0],
                   [0.2,0.1]])
+    
+    # print(code.log_marginal_lik_ppgasp(np.array(1,2), 0.1, True, [A,A+0.1], X,
+    #                                    "Yes", ))
+    # log_marginal_lik_ppgasp(const Eigen::VectorXd &  param,double nugget, const bool nugget_est,
+    #                         const py::list& R0, const Eigen::MatrixXd & X,
+    #                         const std::string zero_mean,const Eigen::MatrixXd & output, 
+    #                         const Eigen::VectorXi  &kernel_type,const Eigen::VectorXd & alpha ){
+
+                                
 
     #print(A)
     #print(code.matern_5_2_funct(A,0.1))
@@ -144,3 +153,29 @@ if __name__ == '__main__':
 
 #     #ys = range(10)
 #     #print(my_own.square(ys))
+
+
+# ##########Borehole examples to test findInertInputs()
+
+# sampler = qmc.LatinHypercube(d=8)
+# sample_input = 10 * sampler.random(n=40)
+
+# #input <- maximinLHS(n=40, k=8)  # maximin lhd sample
+# # rescale the design to the domain of the Borehole function
+# LB=np.array([0.05,100,63070,990,63.1,700,1120,9855])
+# UB=np.array([0.15,50000,115600,1110,116,820,1680,12045])
+# range_UL=UB-LB
+# for i in range(8):
+    
+#     sample_input[:,i]=LB[i]+range_UL[i]*sample_input[:,i]
+
+# num_obs=sample_input.shape[0]
+# sample_output= np.zeros((num_obs,1))
+
+# for i in range(num_obs):
+#     sample_output[i,0]=borehole(sample_input[i,:])
+
+# task = P_rgasp.create_task(sample_input, sample_output, lower_bound = False)  # optimization='nelder-mead'
+# model = P_rgasp.train(task)
+# #m<- rgasp(design = input, response = output, lower_bound=FALSE)
+# P = findInertInputs(model)

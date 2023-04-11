@@ -1,6 +1,6 @@
 <%
 cfg['compiler_args'] = ['-std=c++11', '-stdlib=libc++', '-mmacosx-version-min=10.7']
-cfg['include_dirs'] = ['/usr/local/include/eigen']
+cfg['include_dirs'] = ['./eigen-3.4.0']
 setup_pybind11(cfg)
 %>
 

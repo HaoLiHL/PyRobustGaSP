@@ -112,18 +112,20 @@ def friedman_5_data(x):
     return 10 * np.sin(np.pi*x[0]*x[1]) + 20 * (x[2]-0.5)**2 + 10*x[3] + 5*x[4]
 
 #### hold for now !!!!   # equarion 14 from jointly robust paper
-# def findInertInputs(object,threshold=0.1){
-#   P_hat=object@p*object@beta_hat*object@CL/sum(object@beta_hat*object@CL)
-#   index_inert=which(P_hat<threshold)
-  
-#   print('The estimated normalized inverse range parameters are : {}'.format(P_hat)+'\n')
-#   if(length(which(P_hat<0.1))>0){
-#     cat('The inputs ', index_inert, 'are suspected to be inert inputs','\n')
-#   }else{
-#     cat('no input is suspected to be an inert input', '\n')
-#   }
-#   P_hat
-# }
+def findInertInputs(model,threshold=0.1):
+ 
+    P_hat=model['p']*model['beta_hat']*model['CL']/np.sum(model['beta_hat']*model['CL'])
+    index_inert =np.where(P_hat<threshold)
+    #index_inert=which(P_hat<threshold)
+    
+    print('The estimated normalized inverse range parameters are : {}'.format(P_hat)+'\n')
+    if (len(index_inert[0])>0):
+        print('The inputs ', index_inert[0], 'are suspected to be inert inputs','\n')
+    else:
+        print('no input is suspected to be an inert input', '\n')
+    
+    return P_hat
+
 
 
 def neg_log_marginal_post_approx_ref(param, nugget, nugget_est,R0,X,zero_mean,output,CL,a,b,kernel_type,alpha):
@@ -286,7 +288,7 @@ def construct_ppgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero
                             model_output,kernel_type_num,model_alpha):
     
     model_beta_hat = np.array(model_beta_hat).reshape(-1,1)
-    return_list = fcpp.construct_rgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero_mean,
+    return_list = fcpp.construct_ppgasp(model_beta_hat, model_nugget, model_R0, model_X, model_zero_mean,
                                 model_output,kernel_type_num,model_alpha)
     return return_list
 
@@ -296,6 +298,19 @@ def pred_rgasp(beta_hat,nugget,input,X,zero_mean,output,
     
     beta_hat = np.array(beta_hat).reshape(-1,1)
     res = fcpp.pred_rgasp(beta_hat,nugget,input,X,zero_mean,output,
+                         testing_input,testing_trend,L,LX,theta_hat,
+                         sigma2_hat,qt_025,qt_975,r0,kernel_type_num,alpha,method,interval_data)
+    return res
+
+
+
+def pred_ppgasp(beta_hat,nugget,input,X,zero_mean,output,
+                     testing_input,testing_trend,L,LX,theta_hat,
+                     sigma2_hat,qt_025,qt_975,r0,kernel_type_num,alpha,method,interval_data):
+    
+    beta_hat = np.array(beta_hat).reshape(-1,1)
+    #beta_hat = np.array(beta_hat).reshape(-1,1)
+    res = fcpp.pred_ppgasp(beta_hat,nugget,input,X,zero_mean,output,
                          testing_input,testing_trend,L,LX,theta_hat,
                          sigma2_hat,qt_025,qt_975,r0,kernel_type_num,alpha,method,interval_data)
     return res
@@ -454,17 +469,17 @@ def test_const_column(d):
 
 
 
-A = np.array([[0.1,0.2],
-              [0.2,0.1]])
-X = np.array([[0.1,0.2],
-              [0.3,0.4]])
-L = np.array([[0.1,0],
-              [0.2,0.1]])
+# A = np.array([[0.1,0.2],
+#               [0.2,0.1]])
+# X = np.array([[0.1,0.2],
+#               [0.3,0.4]])
+# L = np.array([[0.1,0],
+#               [0.2,0.1]])
 
-#log_approx_ref_prior(np.array([0.1,0.1]),0.1, True,np.array([0.1,0.1]),0.1,0.1)
+# #log_approx_ref_prior(np.array([0.1,0.1]),0.1, True,np.array([0.1,0.1]),0.1,0.1)
 
-#print("friedman_5_data",friedman_5_data([1,2,3,4,5]))  
-print(neg_log_marginal_lik_deriv_ppgasp(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",X, np.array([0.1,0.1]),0.1,0.2, np.array([1,2]),np.array([0.1,0.1])))
+# #print("friedman_5_data",friedman_5_data([1,2,3,4,5]))  
+# print(neg_log_marginal_lik_deriv_ppgasp(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",X, np.array([0.1,0.1]),0.1,0.2, np.array([1,2]),np.array([0.1,0.1])))
 
 #np.array([0.1,0.1]),0.1,0.2
 #print(neg_log_marginal_post_ref_ppgasp(np.array([0.1,0.1]),0.1, True,[A,A],A,"Yes",X, 'ref_xi', np.array([1,2]),np.array([0.1,0.1])))

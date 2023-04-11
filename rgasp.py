@@ -51,10 +51,20 @@ class rgasp(object):
                     optimization='lbfgs',
                     #alpha=np.repeat(1.9,design.shape[1]),
                     lower_bound=True,
+                    max_eval = None,
                     #max_eval=max(30,20+5*design.shape[1]),
                     initial_values=None,
-                    num_initial_values=2):
-
+                    num_initial_values=2,
+                    trend = None):
+        
+        if np.ndim(response)==1:
+            response = response.reshape(-1,1)
+        if np.ndim(design)==1:
+            design = design.reshape(-1,1)
+            
+        if max_eval is None:
+            max_eval=max(30,20+5*design.shape[1])
+            
         # self.design = design
         # self.response = response
         # self.nugget = nugget
@@ -82,9 +92,9 @@ class rgasp(object):
         # #lower_bound=True,
         # self.max_eval=max(30,20+5*design.shape[1]),
         
+        if trend is None:
+            trend=np.repeat(1.0,len(response)).reshape(-1,1)
         
-        trend=np.repeat(1.0,len(response)).reshape(-1,1)
-        max_eval=max(30,20+5*design.shape[1])
         alpha=np.repeat(1.9,design.shape[1])
         a=0.2
         b=1/(len(response))**(1/design.shape[1])*(a+design.shape[1])
@@ -336,7 +346,7 @@ class rgasp(object):
             if (lower_bound==True):
                 
                 bnds = ((-5, 12),)
-                LB_all = minimize(search_LB_prob,[0],bounds = bnds,args= (model_R0,COND_NUM_UB,model_p,kernel_type_num,model_alpha,nugget,))
+                LB_all = minimize(search_LB_prob,[1.0],bounds = bnds,args= (model_R0,COND_NUM_UB,model_p,kernel_type_num,model_alpha,nugget,))
                 # optimize(search_LB_prob, interval=c(-5,12), maximum = FALSE, R0=model@R0,COND_NUM_UB= COND_NUM_UB,
                 #                   p=model@p,kernel_type=kernel_type_num,alpha=model@alpha,nugget=nugget) ###find a lower bound for parameter beta
                 LB_all_minimum = LB_all.x[0]
@@ -689,6 +699,7 @@ class rgasp(object):
                         'q': model_q,
                         'nugget_est': model_nugget_est,
                         'kernel_type':model_kernel_type,
+                        'CL':model_CL,
                         
                         
                         
@@ -712,7 +723,7 @@ class rgasp(object):
                      interval_data=True,
                      outasS3 = True):
         
-        if testing_trend == None:
+        if testing_trend is None:
             testing_trend = np.repeat(1.0,testing_input.shape[0]).reshape(-1,1)
         
         testing_input=np.array(testing_input)
@@ -830,7 +841,7 @@ class rgasp(object):
         p_x = design.shape[1]
         
         model_input = design # <- matrix(as.numeric(design), dim(design)[1],dim(design)[2])
-        model_output = task['response'].reshape(-1,1)
+        model_output = task['response']#.reshape(-1,1)
         model_isotropic= task['isotropic']
         
         optimization = task['optimization']
@@ -978,7 +989,7 @@ class rgasp(object):
             if (lower_bound==True):
                 
                 bnds = ((-5, 12),)
-                LB_all = minimize(search_LB_prob,[0],bounds = bnds,args= (model_R0,COND_NUM_UB,model_p,kernel_type_num,model_alpha,nugget,))
+                LB_all = minimize(search_LB_prob,[5.0],bounds = bnds,args= (model_R0,COND_NUM_UB,model_p,kernel_type_num,model_alpha,nugget,))
                 # optimize(search_LB_prob, interval=c(-5,12), maximum = FALSE, R0=model@R0,COND_NUM_UB= COND_NUM_UB,
                 #                   p=model@p,kernel_type=kernel_type_num,alpha=model@alpha,nugget=nugget) ###find a lower bound for parameter beta
                 LB_all_minimum = LB_all.x[0]
@@ -1307,6 +1318,144 @@ class rgasp(object):
         print('Range parameters: ', 1/model['beta_hat'],'\n')
         print('Noise parameter: ', model['sigma2_hat']*model['nugget'],'\n')
         return model
+    
+    
+    def predict_ppgasp(self,model, 
+                      testing_input, 
+                      testing_trend= None,
+                      r0= None,
+                     interval_data=True,
+                     outasS3 = True,
+                     loc_index = None):
+        
+        if testing_trend is None:
+            testing_trend = np.repeat(1.0,testing_input.shape[0]).reshape(-1,1)
+        
+        testing_input=np.array(testing_input)
+        
+        if(model['zero_mean']=="Yes"):
+            
+            testing_trend=np.repeat(0.0,testing_input.shape[0])
+        else:
+            if testing_trend.shape[1]!=model['X'].shape[1]:
+                sys.exit("The dimensions of the design trend matrix and testing trend matrix do not match. \n")
+                
+        if ( testing_input.shape[1]!=model['input'].shape[1]):  
+            sys.exit("The dimensions of the design matrix and testing inputs matrix do not match. \n")
+        
+        num_testing_input = testing_input.shape[0]
+        #X_testing = matrix(1,num_testing_input,1) ###testing trend
+
+        testing_input=np.array(testing_input)
+
+        ##form the r0 matrix
+        p_x = model['input'].shape[1]
+        
+        if (r0 == None):
+            
+            if( not model['isotropic']):
+                r0 = []  # as.list(1:object@p)
+                for i in range(model['p']):
+                    
+                    r0.append(np.abs(testing_input[:,i][:,None] - model['input'][:,i]))
+                    
+                    #r0.append = as.matrix(abs(outer(testing_input[,i], object@input[,i], "-")))
+                
+            else:
+                r0 = []
+                if(p_x<model['num_obs']):
+                    r0_here=0
+                    for i in range(p_x):
+                        
+                        r0_here=r0_here+(np.abs(testing_input[:,i][:,None] - model['input'][:,i]))**2
+                    
+                    r0.append(np.sqrt(r0_here))
+                else:
+                    r0.append(euclidean_distance(testing_input,model['input']))
+                    
+        elif type(r0)== np.ndarray:
+            r0_here=r0
+            r0 = []
+            r0.append(r0_here)
+        elif type(r0) != list:
+            sys.exit('r0 should be either a matrix or a list \n')
+        # line 69
+        
+        if (len(r0)!=model['p']):
+            sys.exit("the number of R0 matrices should be the same as the number of range parameters in the kernel \n")
+          
+        if ( (r0[0].shape[0]!=num_testing_input) or (r0[0].shape[1]!=model['num_obs'])):
+            
+            sys.exit("the dimension of R0 matrices should match the number of observations \n")
+            
+        kernel_type_num=np.repeat(0,model['p'])
+        #rep(0,  object@p)
+        
+        for i_p in range(model['p']):
+            if(model['kernel_type'][i_p]=="matern_5_2"):
+                
+                kernel_type_num[i_p]=3
+            elif (model['kernel_type'][i_p]=="matern_3_2"):
+                kernel_type_num[i_p]=2
+            elif (model['kernel_type'][i_p]=="pow_exp"):
+                kernel_type_num[i_p]=1
+            elif (model['kernel_type'][i_p]=="periodic_gauss"):  ##this is periodic folding on Gaussian kernel
+                kernel_type_num[i_p]=4
+            elif (model['kernel_type'][i_p]=="periodic_exp"):   ##this is periodic folding on Exponential kernel
+                kernel_type_num[i_p]=5
+       
+        if loc_index == None:
+            pred_loc_index = np.arange(0,model['output'].shape[1],1)
+        else:
+            pred_loc_index=np.array(loc_index)
+            if (min(loc_index)<1 or max(loc_index)>model['output'].shape[1] ):
+                
+                sys.exit("loc_index should not be smaler than 1 or larger than the number of columns of output \n")
+           
+        # if (model['theta_hat'].shape[0]==1):
+        #     theta_hat_pred_loc = model['theta_hat'][:,pred_loc_index].T
+        #     #t(as.matrix(object@theta_hat[,pred_loc_index]))
+        # else:
+        ### note here let theta_hat_pred_loc be row vector
+        theta_hat_pred_loc=model['theta_hat'][:,pred_loc_index]
+            #as.matrix(object@theta_hat[,pred_loc_index])
+        
+            
+     
+        
+            
+        if( (model['method']=='post_mode') or (model['method']=='mmle') ):
+            
+            #sp.stats.t.ppf(1 - alpha / 2, n - p - 1)           
+           
+            qt_025=sp.stats.t.ppf(0.025, model['num_obs'] - model['q'])  
+            qt_975=sp.stats.t.ppf(0.975, model['num_obs'] - model['q'])  
+            
+            pred_list=pred_ppgasp(model['beta_hat'],model['nugget'],model['input'],model['X'],model['zero_mean'],model['output'][:,pred_loc_index],
+                                 testing_input,testing_trend,model['L'],model['LX'],theta_hat_pred_loc,
+                                 model['sigma2_hat'][pred_loc_index],qt_025,qt_975,r0,kernel_type_num,model['alpha'],model['method'],interval_data)
+           
+        
+        elif model['method']=='mle':
+            
+            qn_025=sp.stats.norm.ppf(0.025)  
+            qn_975=sp.stats.norm.ppf(0.975)  
+            
+            pred_list=pred_ppgasp(model['beta_hat'],model['nugget'],model['input'],model['X'],model['zero_mean'],model['output'][:,pred_loc_index],
+                                 testing_input,testing_trend,model['L'],model['LX'],theta_hat_pred_loc,
+                                 model['sigma2_hat'][pred_loc_index],qn_025,qn_975,r0,kernel_type_num,model['alpha'],model['method'],interval_data)
+           
+                        
+        output_list = {}
+        
+       
+        output_list['mean']=pred_list[0]   #####can we all use @ or S? It will be more user friendly in that way 
+        output_list['lower95']=pred_list[1]
+        output_list['upper95']=pred_list[2]
+        output_list['sd']=np.sqrt(pred_list[3]) 
+
+        
+        return output_list
 
         
         
@@ -1380,8 +1529,8 @@ class rgasp(object):
         
     
 
-P_rgasp = rgasp()
-import lhsmdu
+# P_rgasp = rgasp()
+# import lhsmdu
 
 
 # design = np.array([0.7529149,
@@ -1412,27 +1561,33 @@ import lhsmdu
 #                   test_input)
 
 
-design = np.array(lhsmdu.sample(40,8))
-#design = np.random.normal(size = 100).reshape(50,-1)
+# design = np.array(lhsmdu.sample(40,8))
+# #design = np.random.normal(size = 100).reshape(50,-1)
 
 
 
-response = np.arange(40).reshape(-1,1)
+# response = np.arange(80).reshape(40,-1)
 
-for i in range(40):
-    response[i,0] = borehole(design[i,:])
+# # for i in range(40):
+# #     response[i,0] = borehole(design[i,:])
+    
 
-#response = np.random.normal(size = 50)
-#task = test.create_task(design, response, nugget_est =True,method='mmle',prior_choice='ref_gamma',optimization= 'brent')
-task = P_rgasp.create_task(design, response, method='mmle')  # optimization='nelder-mead'
 
-model = P_rgasp.train_ppgasp(task)
+# #response = np.random.normal(size = 50)
+# #task = test.create_task(design, response, nugget_est =True,method='mmle',prior_choice='ref_gamma',optimization= 'brent')
+# task = P_rgasp.create_task(design, response, method='mle')  # optimization='nelder-mead'
+
+# model = P_rgasp.train_ppgasp(task)
+
+# print(model['theta_hat'])
 
 # test_input = np.random.normal(size = 80).reshape(10,-1)
-# #np.arange(0,10.01,1/100).reshape(-1,1)
+# # #np.arange(0,10.01,1/100).reshape(-1,1)
 
+# result = P_rgasp.predict_ppgasp(model, 
+#                     test_input)
 # result = P_rgasp.predict_rgasp(model, 
-#                   test_input)
+#                    test_input)
 
 #print(higdon_1_data(4))
 
