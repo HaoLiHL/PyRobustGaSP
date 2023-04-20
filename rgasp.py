@@ -29,7 +29,7 @@ import scipy as sp
 from scipy.optimize import minimize,fmin_l_bfgs_b
 import scipy.stats    
 
-from functions import *
+from src.functions import *
 
 class rgasp(object):
     def __init__(self):
@@ -56,6 +56,70 @@ class rgasp(object):
                     initial_values=None,
                     num_initial_values=2,
                     trend = None):
+        """
+        Parameters
+        ----------
+        design : array-like of shape (n_samples, n_features)
+            The input design matrix.
+        response : array-like of shape (n_samples, )
+            The target response values. If it is 2D, each row is one runs of the computer model output.
+        zero_mean : str, optional (default='No')
+            The type of mean function to use. Can be 'No' for zero-mean function or 'Yes' for constant mean function.
+        nugget : float, optional (default=0)
+            The nugget parameter used in the covariance function.
+        nugget_est : bool, optional (default=False)
+            Whether to estimate the nugget parameter.  False means nugget is fixed
+        range_par : either None or a vector. If it is None, it means range parameters are estimated;
+            otherwise range parameters are given. The default value is NA
+        method : str, optional (default='post_mode')
+            Method of parameter estimation. post_mode means the marginal posterior mode
+            is used for estimation. mle means the maximum likelihood estimation is used.
+            mmle means the maximum marginal likelihood estimation is used. The post_mode
+            is the default method.
+        prior_choice : str, optional (default='ref_approx')
+            The choice of prior for range parameters and noise-variance parameters. ref_xi
+            and ref_gamma means the reference prior with reference prior with the log of
+            inverse range parameterization ξ or range parameterization γ. ref_approx uses
+            the jointly robust prior to approximate the reference prior. The default choice is
+            ref_approx
+        kernel_type : A vector specifying the type of kernels of each coordinate of the input. matern_3_2
+            and matern_5_2 are Matern correlation with roughness parameter 3/2 and
+            5/2 respectively. pow_exp is power exponential correlation with roughness parameter alpha. If pow_exp is to be used, one needs to specify its roughness
+            parameter alpha. The default choice is matern_5_2.
+        isotropic : bool, optional (default=False)
+            A boolean value. T means the isotropic kernel will be used and F means the
+            separable kernel will be used. The default choice is the separable kernel.
+        R0 : float, optional (default=None)
+            The distance between inputs. If the value is NA, it will be calculated later. It can
+            also be specified by the user. If specified by user, it is either a matrix or list.
+            The default value is NA.
+        optimization : str, optional (default='lbfgs')
+            The method for numerically optimization of the kernel parameters. Currently
+            three methods are implemented. lbfgs is the low-storage version of the BroydenFletcher-Goldfarb-Shanno method. nelder-mead is the Nelder and Mead method.
+            brent is the Brent method for one-dimensional problems.
+        lower_bound : bool, optional (default=True)
+            T means the default lower bounds of the inverse range parameters are used to constrained the optimization and F means the optimization is
+            unconstrained. The default value is T and we also suggest to use F in various
+            scenarios.
+        max_eval : int, optional (default=None)
+            The maximum number of evaluations for the optimization algorithm.
+        initial_values : list of array-like, optional (default=None)
+            A list of initial values of the kernel parameters to be optimized numerically,
+            where each row of the matrix contains a set of the log inverse range parameters
+            and the log nugget parameter.
+        num_initial_values : int, optional (default=2)
+            The number of initial values of the kernel parameters in optimization
+        trend : array-like of shape (n_samples, ), optional (default=None)
+            The mean/trend matrix of inputs. The default value is a vector of ones.
+        Returns
+        -------
+        task : dict
+            A dictionary containing the input arguments and hyperparameters for the robust Gaussian process regression model.
+
+
+        """
+        
+        
         
         if np.ndim(response)==1:
             response = response.reshape(-1,1)
@@ -162,7 +226,62 @@ class rgasp(object):
             
         return task
     
-    def train(self,task):
+    def train_rgasp(self,task):
+        """
+        Parameters
+        ----------
+        task : Dict
+            A dictionary containing the input arguments and hyperparameters for the robust Gaussian process regression model.
+.
+        Returns
+        -------
+        model : Dict
+            dict
+                A dictionary containing the following keys:
+                - beta_hat: ndarray
+                    An array of shape (p,) containing the inverse-range parameters.
+                - nugget: float
+                    The noise-variance ratio parameter.
+                - R0: list of ndarrays
+                    A list containing the absolute difference matrices of the input vectors.
+                - X: ndarray
+                    An array of shape (n, q) containing the mean basis function.
+                - zero_mean: str
+                    A string indicating whether the mean is zero or not.
+                - output: ndarray
+                    An array of shape (n, k) containing the output vectors of each run of the computer model.
+                - kernel_type_num: int
+                    An integer indicating the type of kernel used.
+                - alpha: ndarray
+                    An array of shape (p,) containing the roughness parameters in the kernel.
+                - L: ndarray
+                    An array of shape (n, n) containing the Cholesky decomposition of the correlation matrix R.
+                - LX: ndarray
+                    An array of shape (q, q) containing the Cholesky decomposition of the correlation matrix t(X)R^(-1)X.
+                - theta_hat: ndarray
+                    An array of shape (q,) containing the mean (trend) parameter.
+                - sigma2_hat: ndarray
+                    An array of shape (k,) containing the estimated variance parameter of each output.
+                - isotropic: bool
+                    A boolean indicating whether the kernel is isotropic.
+                - p: int
+                    The number of dimensions of the inputs.
+                - num_obs: int
+                    The number of observations.
+                - input: ndarray
+                    An array of shape (n, p) containing the design of experiments.
+                - method: str
+                    A string indicating the method of parameter estimation.
+                - q: int
+                    The number of mean basis.
+                - nugget_est: bool
+                    A boolean indicating whether the nugget is estimated or fixed.
+                - kernel_type: list of str
+                    A list of strings indicating the type of kernel used.
+                - CL: ndarray
+                    An array used for the lower bound and the prior.
+    """
+    
         
         #####Only numeric inputs are allowed
         design=task['design']
@@ -722,6 +841,32 @@ class rgasp(object):
                       r0= None,
                      interval_data=True,
                      outasS3 = True):
+        """
+        Parameters
+        ----------
+        model : Dict 
+            The dict object returned by train_rgasp().
+        testing_input : array-like of shape (n_samples, n_features)
+            The testing input design matrix..
+        testing_trend : array-like of shape (n_samples, ), optional (default=None)
+            The mean/trend matrix of testing inputs. The default value is a vector of ones.
+        r0 : TYPE, optional
+            The distance between input and testing input. If the value is NA, it will be calculated later. It can also be specified by the user. If specified by user, it is either a
+            matrix or list. The default value is NA. The default is None.
+        interval_data : TYPE, optional
+            A boolean value. If T, the interval of the data will be calculated. Otherwise, the
+            interval of the mean of the data will be calculted.
+
+        Returns
+        -------
+        output_list : Dict
+            'mean': an ndarray of shape (n,) containing the predictive mean for the testing inputs.
+            'lower95': an ndarray of shape (n,) containing the lower bound of the 95% posterior credible interval for each testing input.
+            'upper95': an ndarray of shape (n,) containing the upper bound of the 95% posterior credible interval for each testing input.
+            'sd': an ndarray of shape (n,) containing the standard deviation of each testing input.
+.
+
+        """
         
         if testing_trend is None:
             testing_trend = np.repeat(1.0,testing_input.shape[0]).reshape(-1,1)
@@ -834,6 +979,58 @@ class rgasp(object):
         
     
     def train_ppgasp(self, task):
+        """
+        Parameters
+        ----------
+        task : Dict
+            A dictionary containing the input arguments and hyperparameters for the Parallel Partial Gaussian process regression model.
+.
+        Returns
+        -------
+        model : Dict
+            dict
+                A dictionary containing the following keys:
+                - beta_hat: ndarray
+                    An array of shape (p,) containing the inverse-range parameters.
+                - nugget: float
+                    The noise-variance ratio parameter.
+                - R0: list of ndarrays
+                    A list containing the absolute difference matrices of the input vectors.
+                - X: ndarray
+                    An array of shape (n, q) containing the mean basis function.
+                - zero_mean: str
+                    A string specifying whether the mean is zero or not.
+                - output: ndarray
+                    An array of shape (n, k) containing the output vectors in each run of the computer model.
+                - kernel_type_num: int
+                    An integer specifying the type of kernel to use.
+                - alpha: ndarray
+                    An array of shape (p,) containing the roughness parameters in the kernel.
+                - L: ndarray
+                    An array of shape (n, n) containing the Cholesky decomposition of the correlation matrix R.
+                - LX: ndarray
+                    An array of shape (q, q) containing the Cholesky decomposition of the correlation matrix t(X) R^-1 X.
+                - theta_hat: ndarray
+                    An array of shape (q,) containing the mean (trend) parameter.
+                - sigma2_hat: ndarray
+                    An array of shape (k,) containing the estimated variance parameter of each output.
+                - isotropic: bool
+                    A boolean specifying whether the kernel is isotropic.
+                - p: int
+                    An integer specifying the dimension of the inputs.
+                - num_obs: int
+                    An integer specifying the number of observations.
+                - input: ndarray
+                    An array of shape (n, p) containing the design of experiments.
+                - method: str
+                    A string specifying the method of parameter estimation.
+                - q: int
+                    An integer specifying the number of mean basis.
+                - nugget_est: bool
+                    A boolean specifying whether the nugget is estimated.
+                - kernel_type: str
+                    A string specifying the type of kernel to use.
+    """
         
         
         design=task['design']
@@ -1327,7 +1524,32 @@ class rgasp(object):
                      interval_data=True,
                      outasS3 = True,
                      loc_index = None):
-        
+        """
+        Parameters
+        ----------
+        model : Dict 
+            The dict object returned by train_rgasp().
+        testing_input : array-like of shape (n_samples, n_features)
+            The testing input design matrix..
+        testing_trend : array-like of shape (n_samples, ), optional (default=None)
+            The mean/trend matrix of testing inputs. The default value is a vector of ones.
+        r0 : TYPE, optional
+            The distance between input and testing input. If the value is NA, it will be calculated later. It can also be specified by the user. If specified by user, it is either a
+            matrix or list. The default value is NA. The default is None.
+        interval_data : TYPE, optional
+            A boolean value. If T, the interval of the data will be calculated. Otherwise, the
+            interval of the mean of the data will be calculted.
+
+        Returns
+        -------
+        output_list : Dict
+            'mean': an ndarray of shape (n,) containing the predictive mean for the testing inputs.
+            'lower95': an ndarray of shape (n,) containing the lower bound of the 95% posterior credible interval for each testing input.
+            'upper95': an ndarray of shape (n,) containing the upper bound of the 95% posterior credible interval for each testing input.
+            'sd': an ndarray of shape (n,) containing the standard deviation of each testing input.
+.
+
+        """
         if testing_trend is None:
             testing_trend = np.repeat(1.0,testing_input.shape[0]).reshape(-1,1)
         
