@@ -43,7 +43,7 @@ testing_output=higdon_1_data(testing_input)
 
 
 
-##Authors:
+## Authors:
 Hao Li, Mengyang Gu
 
 ## References
