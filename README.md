@@ -12,12 +12,12 @@ Just need to decompressed the src.zip. More examples are shown in example/exampl
 ## Example: Build a robust GaSP model  
 ```python
 import numpy as np
-import rgasp
-from src.functions import *
+from robustgp import robustgp
+from robustgp.src.functions import *
 from scipy.stats import qmc
 
 
-P_rgasp = rgasp.rgasp()
+P_rgasp = robustgp.robustgp()
 
 ##1D function
 
