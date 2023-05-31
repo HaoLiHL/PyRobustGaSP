@@ -47,4 +47,9 @@ testing_output=higdon_1_data(testing_input)
 Hao Li, Mengyang Gu
 
 ## References
-Gu, M., Palomo, J., & Berger, J. O. (2018). RobustGaSP: Robust Gaussian stochastic process emulation in R. arXiv preprint arXiv:1801.01874.
+1. Gu, M. & Berger, J. (2016). Parallel partial Gaussian process emulation for computer
+models with massive output. The Annals of Applied Statistics 10(3), 1317-1347.
+2. Gu, M., Wang, X. & Berger, J. (2018). Robust Gaussian stochastic process emulation. The
+Annals of Statistics. 46(6A), 3038-3066.
+3. Gu, M. (2019). Jointly robust prior for Gaussian stochastic process in emulation,
+calibration and variable selection. Bayesian Analysis. 14(3), 857-885.
