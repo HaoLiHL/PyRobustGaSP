@@ -7,18 +7,18 @@ Created on Tue Mar  7 21:49:15 2023
 """
 
 import sys
-sys.path.append('../')
+#sys.path.append('../')
 
-# import rgasp and functions 
-from robustgp import robustgp
-from robustgp.src.functions import *
+# import PyRobustGaSP and functions 
+import PyRobustGaSP
+from src.functions import *
 import numpy as np
 import scipy as sp
 import scipy.stats  
 import lhsmdu  
 
 
-P_rgasp = robustgp.robustgp()
+P_rgasp = PyRobustGaSP.PyRobustGaSP()
 
 
 ##1D function
@@ -147,12 +147,12 @@ print("The average length of the CI is ",length_m)
 from numpy import genfromtxt
 import pandas as pd
 
-humanity_X = genfromtxt('../robustgp/src/dataset/humanity_X.csv', delimiter=',')[1:,:]
-humanity_Y = genfromtxt('../robustgp/src/dataset/humanity_Y.csv', delimiter=',')[1:,:]
+humanity_X = genfromtxt('../PyRobustGaSP/src/dataset/humanity_X.csv', delimiter=',')[1:,:]
+humanity_Y = genfromtxt('../PyRobustGaSP/src/dataset/humanity_Y.csv', delimiter=',')[1:,:]
 task = P_rgasp.create_task(humanity_X, humanity_Y, nugget_est=True, num_initial_values = 3)  # optimization='nelder-mead'
 model = P_rgasp.train_ppgasp(task)
-humanity_Xt = genfromtxt('../robustgp/src/dataset/humanity_Xt.csv', delimiter=',')[1:,:]
-humanity_Yt = genfromtxt('../robustgp/src/dataset/humanity_Yt.csv', delimiter=',')[1:,:]
+humanity_Xt = genfromtxt('../PyRobustGaSP/src/dataset/humanity_Xt.csv', delimiter=',')[1:,:]
+humanity_Yt = genfromtxt('../PyRobustGaSP/src/dataset/humanity_Yt.csv', delimiter=',')[1:,:]
 
 testing_predict = P_rgasp.predict_ppgasp(model, 
                   humanity_Xt)
@@ -165,8 +165,8 @@ prop_m = np.sum((testing_predict['lower95']<=humanity_Yt) & (testing_predict['up
 print("The Proportion of the test output covered by 95% CI is ",round(prop_m,4))
 
 #### ppgasp with trend 
-humanity_X2 = pd.read_csv('../robustgp/src/dataset/humanity_X_2.csv')
-humanity_Xt2 = pd.read_csv('../robustgp/src/dataset/humanity_Xt_2.csv')
+humanity_X2 = pd.read_csv('../PyRobustGaSP/src/dataset/humanity_X_2.csv')
+humanity_Xt2 = pd.read_csv('../PyRobustGaSP/src/dataset/humanity_Xt_2.csv')
 
 trend_ppgasp = np.column_stack((np.repeat(1.0,humanity_X.shape[0]),humanity_X2['foodC'].to_numpy()))
 task_trend = P_rgasp.create_task(humanity_X, humanity_Y,trend = trend_ppgasp, nugget_est=True, num_initial_values = 3)  # optimization='nelder-mead'

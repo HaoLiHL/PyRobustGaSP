@@ -1,4 +1,4 @@
-# pyrgasp
+# PyRobustGaSP
 
 Python version of robust GaSP and PPGaSP
 
@@ -7,17 +7,17 @@ Python 3.7+, Numpy (>=1.19), Scipy (>=1.1), Pybind11, cppimport (see https://pyb
 
 ## Getting Started
 
-Just need to decompressed the robustgp.zip. More examples are shown in example/example.py
+Just need to decompressed the PyRobustGaSP.zip. More examples are shown in example/example.py
 
 ## Example: Build a robust GaSP model  
 ```python
 import numpy as np
-from robustgp import robustgp
-from robustgp.src.functions import *
+from PyRobustGaSP import PyRobustGaSP
+from src.functions import *
 from scipy.stats import qmc
 
 
-P_rgasp = robustgp.robustgp()
+P_rgasp = PyRobustGaSP()
 
 ##1D function
 
