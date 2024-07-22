@@ -7,7 +7,7 @@ Python 3.7+, Numpy (>=1.19), Scipy (>=1.1), Pybind11, cppimport (see https://pyb
 
 ## Getting Started
 
-Just need to decompressed the PyRobustGaSP.zip. More examples are shown in example/example.py
+Just need to decompressed the PyRobustGaSP.zip, and install required Pybind11, and cppimport. More examples are shown in example/example.py
 
 ## Example: Build a robust GaSP model  
 ```python
